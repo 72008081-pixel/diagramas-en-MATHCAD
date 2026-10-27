@@ -92,7 +92,7 @@ def generate_mcdx_for_beam(beam: BeamModel, output_mcdx_path: str, base_template
     """
     if base_template_path is None or not os.path.exists(base_template_path):
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        base_template_path = os.path.join(base_dir, "PLANTILLA_MAESTRA_10_TRAMOS_VIGAS.mcdx")
+        base_template_path = os.path.join(base_dir, "PLANTILLA_MAESTRA_10_TRAMOS_CORREGIDA.mcdx")
 
     files = {}
     with zipfile.ZipFile(base_template_path, 'r') as z:
@@ -255,23 +255,80 @@ def generate_mcdx_for_beam(beam: BeamModel, output_mcdx_path: str, base_template
                 terms_q.append(('-', term_p_q))
 
     # Reemplazar definición de M(x) en Región 61
-    reg_61_math = regs[61].find(tag_ws('math'))
-    reg_61_def = reg_61_math.find(tag_ml('define'))
-    reg_61_def[1] = build_additive_chain(terms_m)
+    reg_61 = next((r for r in regs if r.attrib.get('region-id') == '61'), None)
+    if reg_61 is not None:
+        reg_61_math = reg_61.find(tag_ws('math'))
+        reg_61_def = reg_61_math.find(tag_ml('define'))
+        reg_61_def[1] = build_additive_chain(terms_m)
 
     # Reemplazar definición de Q(x) en Región 62
-    reg_62_math = regs[62].find(tag_ws('math'))
-    reg_62_def = reg_62_math.find(tag_ml('define'))
-    reg_62_def[1] = build_additive_chain(terms_q)
+    reg_62 = next((r for r in regs if r.attrib.get('region-id') == '62'), None)
+    if reg_62 is not None:
+        reg_62_math = reg_62.find(tag_ws('math'))
+        reg_62_def = reg_62_math.find(tag_ml('define'))
+        reg_62_def[1] = build_additive_chain(terms_q)
 
-    # G) Ajustar dimensiones de la imagen en Región 24
-    r24 = regs[24]
-    r24.attrib['width'] = '550'
-    r24.attrib['height'] = '165'
-    png_el = r24.find(f"{tag_ws('picture')}/{tag_ws('png')}")
-    if png_el is not None:
-        png_el.attrib['display-width'] = '550'
-        png_el.attrib['display-height'] = '165'
+    # G) Eliminar imágenes repetidas/parásitas (R0, R1, R57, R60, R63, R65)
+    unwanted_ids = {'0', '1', '57', '60', '63', '65'}
+    for r in list(regs):
+        if r.attrib.get('region-id') in unwanted_ids:
+            regs.remove(r)
+
+    # H) Reorganización geométrica anti-colisión estricta
+    regs_dict = {r.attrib.get('region-id'): r for r in regs}
+    def set_pos(rid, top, left, w=None, h=None):
+        if rid in regs_dict:
+            regs_dict[rid].attrib['top'] = f"{top:.1f}"
+            regs_dict[rid].attrib['left'] = f"{left:.1f}"
+            if w is not None: regs_dict[rid].attrib['width'] = str(w)
+            if h is not None: regs_dict[rid].attrib['height'] = str(h)
+
+    # Longitudes L1..L10
+    set_pos('2', 35.0, 37.8);  set_pos('3', 35.0, 170.0); set_pos('4', 35.0, 305.0); set_pos('5', 35.0, 440.0); set_pos('6', 35.0, 575.0)
+    set_pos('7', 68.0, 37.8);  set_pos('8', 68.0, 170.0); set_pos('9', 68.0, 305.0); set_pos('10', 68.0, 440.0); set_pos('11', 68.0, 575.0)
+
+    # Coordenadas x0..x10 y Ltot
+    set_pos('12', 105.0, 37.8); set_pos('13', 105.0, 170.0); set_pos('14', 105.0, 305.0); set_pos('15', 105.0, 440.0); set_pos('16', 105.0, 575.0)
+    set_pos('17', 140.0, 37.8); set_pos('18', 140.0, 150.0); set_pos('19', 140.0, 265.0); set_pos('20', 140.0, 380.0); set_pos('21', 140.0, 495.0); set_pos('22', 140.0, 610.0)
+    set_pos('23', 175.0, 37.8)
+
+    # Única imagen del esquema de la viga (Región 24, aislada en top=210 a 360)
+    if '24' in regs_dict:
+        r24 = regs_dict['24']
+        r24.attrib['top'] = '210.0'
+        r24.attrib['left'] = '37.8'
+        r24.attrib['width'] = '700'
+        r24.attrib['height'] = '145'
+        png_el = r24.find(f"{tag_ws('picture')}/{tag_ws('png')}")
+        if png_el is not None:
+            png_el.attrib['display-width'] = '700'
+            png_el.attrib['display-height'] = '145'
+
+    # Cargas distribuidas q1..q10 (DEBAJO de la imagen, top: 380)
+    set_pos('25', 380.0, 37.8);  set_pos('26', 380.0, 170.0); set_pos('27', 380.0, 305.0); set_pos('28', 380.0, 440.0); set_pos('29', 380.0, 575.0)
+    set_pos('30', 418.0, 37.8);  set_pos('31', 418.0, 170.0); set_pos('32', 418.0, 305.0); set_pos('33', 418.0, 440.0); set_pos('34', 418.0, 575.0)
+
+    # Cargas puntuales P0..P10
+    set_pos('35', 458.0, 37.8);  set_pos('36', 458.0, 150.0); set_pos('37', 458.0, 265.0); set_pos('38', 458.0, 380.0); set_pos('39', 458.0, 495.0); set_pos('40', 458.0, 610.0)
+    set_pos('41', 495.0, 37.8);  set_pos('42', 495.0, 150.0); set_pos('43', 495.0, 265.0); set_pos('44', 495.0, 380.0); set_pos('45', 495.0, 495.0)
+
+    # Momentos M0..M10
+    set_pos('46', 535.0, 37.8);  set_pos('47', 535.0, 205.0); set_pos('48', 535.0, 375.0); set_pos('49', 535.0, 545.0)
+    set_pos('50', 570.0, 37.8);  set_pos('51', 570.0, 205.0); set_pos('52', 570.0, 375.0); set_pos('53', 570.0, 545.0)
+    set_pos('54', 605.0, 37.8);  set_pos('55', 605.0, 205.0); set_pos('56', 605.0, 375.0)
+
+    # Reacciones
+    set_pos('58', 650.0, 37.8)
+    set_pos('59', 650.0, 230.0)
+
+    # Ecuaciones M(x), Q(x) y Rango
+    set_pos('61', 695.0, 37.8)
+    set_pos('62', 760.0, 37.8)
+    set_pos('64', 820.0, 37.8)
+
+    # Diagramas DFC y DMF
+    set_pos('66', 865.0, 37.8, w=650, h=230)
+    set_pos('67', 1135.0, 37.8, w=650, h=230)
 
     # 3. Guardar el archivo XML modificado en el paquete .mcdx
     files['mathcad/worksheet.xml'] = ET.tostring(ws_root, encoding='utf-8', xml_declaration=True)

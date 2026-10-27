@@ -24,9 +24,9 @@ from beam_engine import BeamModel, render_beam_diagram
 from mcdx_generator import generate_mcdx_for_beam
 import win32com.client
 
-BASE_MCDX = os.path.join(APP_DIR, "PLANTILLA_MAESTRA_10_TRAMOS_VIGAS.mcdx")
-DEFAULT_OUTPUT_MCDX = os.path.join(APP_DIR, "PLANTILLA_MAESTRA_10_TRAMOS_VIGAS.mcdx")
-DEFAULT_OUTPUT_PDF = os.path.join(APP_DIR, "PLANTILLA_MAESTRA_10_TRAMOS_VIGAS.pdf")
+BASE_MCDX = os.path.join(APP_DIR, "PLANTILLA_MAESTRA_10_TRAMOS_CORREGIDA.mcdx")
+DEFAULT_OUTPUT_MCDX = os.path.join(APP_DIR, "PLANTILLA_MAESTRA_10_TRAMOS_CORREGIDA.mcdx")
+DEFAULT_OUTPUT_PDF = os.path.join(APP_DIR, "PLANTILLA_MAESTRA_10_TRAMOS_CORREGIDA.pdf")
 MANUAL_FILE = os.path.join(APP_DIR, "FORMULARIO_Y_MANUAL_MATHCAD_VIGAS.md")
 MATHCAD_EXE = r"C:\Program Files\PTC\Mathcad Prime 11.0.0.0\MathcadPrime.exe"
 
@@ -546,25 +546,10 @@ class MathcadBeamApp(tk.Tk):
             # 1. Generar archivo .mcdx con imágenes de viga y cortes
             generate_mcdx_for_beam(self.beam, out_file, BASE_MCDX)
             
-            # 2. Sincronizar por COM en Mathcad Prime 11
-            try:
-                mc = win32com.client.Dispatch('MathcadPrime.Application')
-                mc.Visible = False
-                prev_c = mc.Worksheets.Count
-                mc.Open(os.path.abspath(out_file))
-                if mc.Worksheets.Count > prev_c:
-                    ws = mc.Worksheets.Item(mc.Worksheets.Count - 1)
-                    ws.Synchronize()
-                    ws.Close(0)
-                mc.CloseAll(0)
-                mc.Quit(0)
-            except Exception as e_com:
-                print(f"Aviso COM: {e_com}")
-
-            # 3. Lanzar la interfaz oficial de Mathcad Prime 11
+            # 2. Notificar al usuario y abrir respetando la sesión activa de Mathcad
             if os.path.exists(MATHCAD_EXE):
                 subprocess.Popen([MATHCAD_EXE, os.path.abspath(out_file)])
-                messagebox.showinfo("Éxito Total", f"¡Plantilla generada y abierta exitosamente en PTC Mathcad Prime 11!\n\nArchivo:\n{out_file}")
+                messagebox.showinfo("Éxito Total", f"¡Plantilla generada exitosamente!\n\nSe ha abierto en PTC Mathcad Prime 11:\n{out_file}")
             else:
                 os.startfile(out_file)
                 messagebox.showinfo("Generado", f"Archivo generado con éxito:\n{out_file}")
@@ -580,7 +565,6 @@ class MathcadBeamApp(tk.Tk):
             generate_mcdx_for_beam(self.beam, out_mcdx, BASE_MCDX)
 
             mc = win32com.client.Dispatch('MathcadPrime.Application')
-            mc.Visible = False
             prev_c = mc.Worksheets.Count
             mc.Open(os.path.abspath(out_mcdx))
             if mc.Worksheets.Count > prev_c:
@@ -588,8 +572,8 @@ class MathcadBeamApp(tk.Tk):
                 ws.Synchronize()
                 ws.SaveAs(os.path.abspath(out_pdf))
                 ws.Close(0)
-            mc.CloseAll(0)
-            mc.Quit(0)
+            if prev_c == 0:
+                mc.Quit(0)
 
             messagebox.showinfo("PDF Exportado", f"Memoria de cálculo exportada en PDF exitosamente (con gráficos DFC y DMF):\n\n{out_pdf}")
             os.startfile(out_pdf)
