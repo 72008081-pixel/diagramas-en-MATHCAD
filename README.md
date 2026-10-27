@@ -1,37 +1,54 @@
-# Diagramas en Mathcad — Generador Automatizado para PTC Mathcad Prime 11
+# Diagramas en Mathcad — Suite y Generador Automatizado para PTC Mathcad Prime 11
 
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
-[![Mathcad](https://img.shields.io/badge/PTC%20Mathcad-Prime%2011.0.0-orange?logo=mathcad&logoColor=white)](https://www.mathcad.com/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Author](https://img.shields.io/badge/Author-72008081--pixel-purple?logo=github)](https://github.com/72008081-pixel)
-
-Suite de escritorio interactiva y generador de memorias de cálculo para el análisis de vigas isostáticas e hiperestáticas en **PTC Mathcad Prime 11.0.0**. Implementa el método de **Funciones de Singularidad / Macaulay mediante operadores booleanos** para producir automáticamente las funciones seccionales, el cálculo de reacciones y los diagramas en vivo de **Fuerza Cortante (DFC)** y **Momento Flector (DMF)**.
+[![Live Web App](https://img.shields.io/badge/🌐%20Web%20App%20Live-GitHub%20Pages-00D2B5?style=for-the-badge&logo=googlechrome&logoColor=white)](https://72008081-pixel.github.io/diagramas-en-MATHCAD/)
+[![GitHub Repo](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/72008081-pixel/diagramas-en-MATHCAD)
+[![PTC Mathcad](https://img.shields.io/badge/PTC%20Mathcad-Prime%2011.0.0-orange?style=for-the-badge&logo=mathcad&logoColor=white)](https://www.mathcad.com/)
+[![Tests](https://img.shields.io/badge/Tests%20COM%20Mathcad-10%2F10%20Aprobados-10b981?style=for-the-badge)](run_10_tests.py)
 
 ---
 
-## 🌟 Características Principales
+> 🚀 **HERRAMIENTA WEB DESPLEGADA EN VIVO:**  
+> 👉 **[https://72008081-pixel.github.io/diagramas-en-MATHCAD/](https://72008081-pixel.github.io/diagramas-en-MATHCAD/)**  
+> *(Accede y utiliza la suite completa directamente desde tu navegador sin instalar nada, o descárgate los `.mcdx` listos para Mathcad Prime 11)*
 
-1. **Interfaz Gráfica de Escritorio Intuitiva (Desktop GUI):**
-   - **Barra de Presets Rápidos (1 clic):** Carga instantáneamente configuraciones de examen comunes (Ejercicio Oficial, Carga Puntual Céntrica, Carga Distribuida Uniforme, Cantilever/Empotramiento, Doble Voladizo y Viga Completa de 10 Tramos).
-   - Panel de control intuitivo con pestañas dedicadas para **Tramos ($L_1 \dots L_{10}$)**, **Apoyos (Fijo, Móvil, Empotramiento)**, **Cargas Distribuidas ($q$)**, **Cargas Puntuales ($P$)** y **Momentos Concentrados ($M$)**.
-   - Selector dinámico de 1 a 10 tramos con cálculo automático de coordenadas nodales ($x_0, x_1, \dots, x_n$) y longitud total $L_{\text{tot}}$.
-2. **Previsualizador Vectorial en Tiempo Real (Canvas 2D):**
-   - Dibuja la viga a escala proporcional mientras el usuario escribe o cambia los datos.
-   - Muestra cotas de longitud por tramo y cota total.
-   - Símbolos normalizados de apoyos con achurado de tierra.
-   - Bloques sombreados con flechas continuas para cargas distribuidas.
-   - Flechas verticales para cargas concentradas y flechas curvas para momentos aplicados.
-   - **Líneas de corte de sección punteadas con etiquetas formales (`Corte 1-1`, `Corte 2-2`, etc.)** tal como se exige en evaluaciones académicas.
-3. **Generación Nativa de Archivos `.mcdx`:**
-   - Construye archivos nativos comprimidos en estándar OPC ZIP compatibles al 100% con **PTC Mathcad Prime 11.0.0**.
-   - Incrusta automáticamente el esquema visual de la viga y sus cortes dentro de la hoja de cálculo.
-   - Escribe las ecuaciones analíticas de $M(x)$ y $Q(x)$ usando la sintaxis booleana de Mathcad.
-   - Configura el muestreo continuo con paso milimétrico: `x := 0 m, 0.001 m .. Ltot`.
-   - Incorpora gráficos bidimensionales XY dinámicos que se actualizan en vivo.
-4. **Automatización COM con Mathcad Prime:**
-   - Sincronización en segundo plano con el motor oficial de Mathcad para calcular los Solve Blocks y poblar los gráficos.
-   - Apertura con 1 solo clic en la interfaz gráfica de usuario de Mathcad Prime.
-   - Exportación directa a PDF vectorial de alta resolución (~450-510 KB) sin necesidad de manipular Mathcad manualmente.
+---
+
+Suite interactiva de cálculo estructural y generador de memorias de cálculo para el análisis de vigas isostáticas e hiperestáticas en **PTC Mathcad Prime 11.0.0**. Implementa el método de **Funciones de Singularidad / Macaulay mediante operadores booleanos** para producir automáticamente las funciones seccionales, el cálculo de reacciones, los cortes formales de sección y los diagramas en vivo de **Fuerza Cortante (DFC)** y **Momento Flector (DMF)**.
+
+Disponible tanto en **Web App interactiva en vivo (GitHub Pages)** como en **Aplicación de Escritorio con sincronización COM directa a Mathcad Prime 11**.
+
+---
+
+## 🌟 Dos Modos de Uso Disponibles
+
+### 🌐 Modo 1: Aplicación Web en Vivo (GitHub Pages)
+Accede directamente desde cualquier navegador web sin requerir instalaciones:
+🔗 **[https://72008081-pixel.github.io/diagramas-en-MATHCAD/](https://72008081-pixel.github.io/diagramas-en-MATHCAD/)**
+
+- **Barra de Presets Rápidos en 1 Clic:** Carga instantáneamente los casos típicos de examen (Oficial 4 tramos, Céntrica 2 tramos, Distribuida continua 3 tramos, Cantilever voladizo, Doble voladizo y Viga Maestra de 10 tramos).
+- **Editor Dinámico de 1 a 10 Tramos:** Modificación reactiva en tiempo real de longitudes, tipos de apoyos (libre, articulado, móvil, empotrado), cargas distribuidas ($q$), cargas concentradas ($P$) y momentos ($M$).
+- **Lienzo Vectorial en Tiempo Real (Canvas 2D):** Dibuja la viga a escala automática, con cotas por tramo, cota total $L_{\text{tot}}$, apoyos, cargas y **líneas de corte de sección punteadas con etiquetas formales (`Corte 1-1`, `Corte 2-2`, etc.)**.
+- **Consola de Equilibrio y Reacciones en Vivo:** Cálculo instantáneo de $V_A$, $V_D$, verificación de $\sum F_y = 0$ y estado de balance estático.
+- **Gráficos Dinámicos DFC y DMF:** Curvas de alta resolución con detección del punto de cortante nulo ($Q=0$) y Momento Máximo ($M_{\max}$).
+- **Generador y Descarga Directa de `.mcdx` en el Navegador:** Mediante JSZip empaqueta dinámicamente el archivo `.mcdx` compatible con Mathcad Prime 11 con la imagen del diagrama incrustada y las variables actualizadas.
+- **Memoria de Cálculo Formal Imprimible:** Genera un reporte técnico listo para imprimir a PDF con membrete universitario.
+- **Ecuaciones de Macaulay listas para Copiar:** Transcripción exacta a la sintaxis booleana de Mathcad Prime 11.
+
+---
+
+### 💻 Modo 2: Aplicación de Escritorio & Automatización COM Mathcad Prime 11
+Para usuarios con **PTC Mathcad Prime 11.0.0** instalado en Windows:
+
+1. **Iniciar la GUI de Escritorio:**
+   ```powershell
+   python app_gui.py
+   ```
+   *o doble clic en:*
+   ```text
+   INICIAR_APP_VIGAS.bat
+   ```
+2. **Botón "Generar y Abrir en Mathcad Prime 11":** Genera el archivo `.mcdx`, lo abre de inmediato en Mathcad Prime 11 y actualiza las gráficas automáticamente.
+3. **Botón "Exportar a PDF Directo":** Utiliza la API COM de Mathcad en segundo plano para generar un PDF vectorial de alta fidelidad (~470 KB) sin abrir ventanas.
 
 ---
 
@@ -49,32 +66,30 @@ Se diseñó e implementó un script de verificación automatizado (`run_10_tests
 | **06** | `TEST_06_3TRAMOS` | 3 tramos, momentos concentrados puros ($+30, -15\text{ kg}\cdot\text{m}$) | **✓ APROBADO** | 4.43 s | 469.3 KB | **False (0 errores)** |
 | **07** | `TEST_07_5TRAMOS` | 5 tramos asimétrica con cargas combinadas ($q, P, M$) | **✓ APROBADO** | 5.16 s | 479.8 KB | **False (0 errores)** |
 | **08** | `TEST_08_6TRAMOS` | 6 tramos con apoyos interiores y cargas múltiples | **✓ APROBADO** | 4.82 s | 476.1 KB | **False (0 errores)** |
-| **09** | `TEST_09_8TRAMOS` | 8 tramos con cargas distribuidas y puntuales combinadas | **✓ APROBADO** | 6.63 s | 491.9 KB | **False (0 errores)** |
+| **09** | `TEST_09_8TRAMOS` | 8 tramos con cargas continuas y puntuales mixtas | **✓ APROBADO** | 6.63 s | 491.9 KB | **False (0 errores)** |
 | **10** | `TEST_10_10TRAMOS` | **10 tramos completos** con máxima variabilidad de cargas | **✓ APROBADO** | 6.32 s | 514.7 KB | **False (0 errores)** |
 
-> **Resultado:** 10 de 10 pruebas exitosas (100% de efectividad).
+> **Diagnóstico:** **10 de 10 pruebas aprobadas (100% de éxito).** Ningún archivo presentó regiones corruptas (`Corrupted: False`), los gráficos se evaluaron sin errores y los PDFs vectoriales se exportaron limpios.
 
 ---
 
-## 🛠️ Registro de Parches y Correcciones Realizadas
+## 🔧 Parches Técnicos Desarrollados e Integrados
 
-Durante las pruebas exhaustivas en el entorno real con Mathcad Prime 11, se identificaron y resolvieron los siguientes detalles técnicos:
+### 1. Parche COM #1: Selección Explícita de Hoja y Cierre Seguro
+- **Diagnóstico:** Mathcad crea por defecto una hoja vacía `"Sin título"` en el índice 0. Al abrir un nuevo archivo sin especificar el índice, `mc.ActiveWorksheet` quedaba vinculado a la hoja en blanco, produciendo PDFs vacíos de 1.7 KB.
+- **Solución implementada:** Selección explícita mediante `ws = mc.Worksheets.Item(mc.Worksheets.Count - 1)`. En el bloque `finally:` se forzó `mc.CloseAll(0)` y `mc.Quit(0)` para liberar memoria RAM.
 
-### 1. Parche COM #1: Gestión de Procesos y Selección de Hoja Activa
-- **Diagnóstico:** Mathcad Prime inicia en modo headless con una hoja en blanco por defecto (`Item(0): "Sin título"`). Al llamar a `mc.Open(path)`, el conteo de hojas asciende a 2, pero `mc.ActiveWorksheet` continuaba apuntando a la hoja vacía (generando PDFs de 1.7 KB). Adicionalmente, los procesos COM quedaban huérfanos al cerrarse la sesión.
-- **Solución implementada:** Se actualizó la selección explícita del documento abierto mediante `ws = mc.Worksheets.Item(mc.Worksheets.Count - 1)`. En el bloque `finally:`, se invocan obligatoriamente `mc.CloseAll(0)` y `mc.Quit(0)` para garantizar que no queden procesos zombi en segundo plano.
-
-### 2. Parche XML #2: Estricta Conformidad de Esquema Mathcad 5.0
-- **Diagnóstico:** Modificaciones dinámicas en atributos no admitidos (como `display-width` colocado en etiquetas `<region>`) ocasionaban rechazo silencioso de la hoja.
-- **Solución implementada:** Se aisló la edición de escala gráfica exclusivamente al nodo hijo `<picture><png display-width="..." display-height="..."/></picture>`, manteniendo la etiqueta `<region>` con sus atributos estrictos (`region-id`, `top`, `left`, `width`, `height`).
+### 2. Parche XML #2: Aislamiento de Atributos de Imagen en `<picture><png>`
+- **Diagnóstico:** Mathcad Prime 11 rechaza etiquetas `<region>` que contengan atributos no reconocidos como `display-width` o `display-height`.
+- **Solución implementada:** Las dimensiones de escalado visual se aplican exclusivamente al nodo interno `<picture><png display-width="550" display-height="165"/>`, dejando a `<region>` únicamente con sus atributos estándar.
 
 ### 3. Parche AST #3: Encadenamiento Binario Asociativo Izquierdo en Macaulay
-- **Diagnóstico:** Fórmulas algebraicas de singularidad con múltiples términos requerían una estructura de árbol binario estricta (`<apply><plus/><apply><minus/>...</apply></apply>`).
+- **Diagnóstico:** Expresiones con múltiples términos de singularidad requerían un árbol binario estricto de operadores (`<apply><plus/><apply><minus/>...</apply></apply>`).
 - **Solución implementada:** Creación del algoritmo `build_additive_chain()` en `mcdx_generator.py`, que ensambla recursivamente de izquierda a derecha todos los términos de apoyos, cargas uniformes de tramo activo, tramos superados, momentos y cargas puntuales.
 
-### 4. Parche UI #4: Presets Rápidos y Redimensionamiento Adaptativo
-- **Diagnóstico:** La entrada manual de hasta 10 tramos en un examen demanda rapidez para el alumno.
-- **Solución implementada:** Se incorporó una barra superior con botones de acceso directo a los 6 casos de estudio más representativos. Se añadió redimensionamiento responsivo al lienzo canvas con el evento `<Configure>` y enlace directo al manual teórico en Markdown.
+### 4. Parche UI #4: Presets Rápidos en 1 Clic y Redimensionamiento Adaptativo
+- **Diagnóstico:** La entrada manual de hasta 10 tramos en pleno examen demandaba agilidad.
+- **Solución implementada:** Integración de la barra superior de Presets Rápidos en 1 Clic tanto en la interfaz de escritorio (`app_gui.py`) como en la aplicación web (`index.html`).
 
 ---
 
@@ -113,46 +128,18 @@ $$x := 0\text{ m}, 0.001\text{ m} .. L_{\text{tot}}$$
 
 ---
 
-## 🚀 Instalación y Uso
-
-### Requisitos
-- Windows 10 u 11 (64-bit).
-- Python 3.10 o superior.
-- PTC Mathcad Prime 11.0.0.
-
-### Dependencias de Python
-```bash
-pip install pillow pywin32
-```
-
-### Ejecución de la Aplicación Gráfica
-Haga doble clic en el archivo:
-```text
-INICIAR_APP_VIGAS.bat
-```
-o ejecute desde la terminal:
-```bash
-python app_gui.py
-```
-
-### Ejecución de las 10 Pruebas Automatizadas
-```bash
-python run_10_tests.py
-```
-
----
-
 ## 📂 Estructura del Repositorio
 
 ```text
 diagramas-en-MATHCAD/
+├── index.html                            # APLICACIÓN WEB INTERACTIVA EN VIVO (GitHub Pages)
 ├── app_gui.py                            # Interfaz gráfica de escritorio con presets y preview en vivo
 ├── beam_engine.py                        # Motor analítico y generador de gráficos vectoriales con cortes
 ├── mcdx_generator.py                     # Constructor dinámico de paquetes OPC nativos .mcdx
 ├── run_10_tests.py                       # Batería de 10 pruebas de estrés automatizadas vía COM
 ├── build_template.py                     # Generador de la plantilla base validada de 10 tramos
 ├── mcdx_toolkit.py                       # Utilidades de inspección y validación OPC
-├── INICIAR_APP_VIGAS.bat                 # Acceso directo para iniciar la interfaz gráfica
+├── INICIAR_APP_VIGAS.bat                 # Acceso directo para iniciar la interfaz gráfica de escritorio
 ├── ABRIR_PLANTILLA_MATHCAD.bat           # Acceso directo para abrir la plantilla en Mathcad Prime
 ├── FORMULARIO_Y_MANUAL_MATHCAD_VIGAS.md  # Manual teórico y formulario exhaustivo paso a paso
 ├── EJERCICIO-01.mcdx                     # Plantilla base oficial del examen
@@ -165,5 +152,8 @@ diagramas-en-MATHCAD/
 
 ---
 
-## 👤 Autor
-Desarrollado para **Análisis Estructural II** por **[72008081-pixel](https://github.com/72008081-pixel)**.
+## 🔗 Enlaces Oficiales
+
+- 🌐 **Herramienta Web en Vivo (GitHub Pages):** [https://72008081-pixel.github.io/diagramas-en-MATHCAD/](https://72008081-pixel.github.io/diagramas-en-MATHCAD/)
+- 💻 **Repositorio en GitHub:** [https://github.com/72008081-pixel/diagramas-en-MATHCAD](https://github.com/72008081-pixel/diagramas-en-MATHCAD)
+- 👤 **Autor:** Desarrollado para **Análisis Estructural II** por **[72008081-pixel](https://github.com/72008081-pixel)**.
