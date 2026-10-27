@@ -1,16 +1,16 @@
 """
 =============================================================================
-MCDX GENERATOR - CONSTRUCTOR DE ARCHIVOS NATIVOS PARA PTC MATHCAD PRIME 11
+MCDX GENERATOR - CONSTRUCTOR DINÁMICO UNIVERSAL PARA MATHCAD PRIME 11
 =============================================================================
-Ensambla el paquete OPC ZIP (.mcdx) con regiones matemáticas, esquemas MathML,
-imágenes vectoriales embebidas y gráficos XY dinámicos.
+Genera archivos nativos .mcdx completamente compatibles con PTC Mathcad Prime 11
+utilizando la estructura base validada de 10 tramos y funciones de Macaulay.
+Incrusta el esquema vectorial de la viga, cotas, cargas, apoyos y cortes.
 """
 
 import os
 import sys
-import zipfile
 import io
-import shutil
+import zipfile
 import xml.etree.ElementTree as ET
 from PIL import Image
 
@@ -31,7 +31,8 @@ def tag_ml(t): return f'{{{ML_NS}}}{t}'
 def tag_p(t): return f'{{{P_NS}}}{t}'
 def tag_c(t): return f'{{{C_NS}}}{t}'
 
-def make_id(name, labels="VARIABLE", is_contextual=False, subscript=None):
+def make_id(name, labels="VARIABLE", is_contextual=True, subscript=None):
+    """Crea un nodo identificador de variable con o sin subíndice."""
     el = ET.Element(tag_ml('id'), {'labels': labels})
     if is_contextual:
         el.attrib['label-is-contextual'] = 'true'
@@ -50,26 +51,6 @@ def make_real(val):
     el.text = f"{val:g}"
     return el
 
-def make_scaled(val, unit_str):
-    apply_el = ET.Element(tag_ml('apply'))
-    ET.SubElement(apply_el, tag_ml('scale'))
-    apply_el.append(make_real(val))
-    if '/' in unit_str:
-        num, den = unit_str.split('/')
-        div_el = ET.SubElement(apply_el, tag_ml('apply'))
-        ET.SubElement(div_el, tag_ml('div'))
-        div_el.append(make_id(num, labels='UNIT', is_contextual=True))
-        div_el.append(make_id(den, labels='UNIT', is_contextual=True))
-    elif '*' in unit_str:
-        p1, p2 = unit_str.split('*')
-        mult_el = ET.SubElement(apply_el, tag_ml('apply'))
-        ET.SubElement(mult_el, tag_ml('mult'))
-        mult_el.append(make_id(p1, labels='UNIT', is_contextual=True))
-        mult_el.append(make_id(p2, labels='UNIT', is_contextual=True))
-    else:
-        apply_el.append(make_id(unit_str, labels='UNIT', is_contextual=True))
-    return apply_el
-
 def make_parens(child):
     el = ET.Element(tag_ml('parens'))
     el.append(child)
@@ -82,312 +63,221 @@ def make_apply(op_name, *args):
         el.append(a)
     return el
 
-def make_define(target, expr):
-    el = ET.Element(tag_ml('define'))
-    el.append(target)
-    el.append(expr)
-    return el
-
-def make_region_math(reg_id, top, left, math_child):
-    reg = ET.Element(tag_ws('region'), {
-        'region-id': str(reg_id),
-        'top': f'{top:.1f}',
-        'left': f'{left:.1f}'
-    })
-    m = ET.SubElement(reg, tag_ws('math'))
-    m.append(math_child)
-    return reg
-
-def make_xaml_package(text, font_size=16, is_bold=True, bg_color='#FFFFF200'):
-    bold_str = 'FontWeight="Bold"' if is_bold else ''
-    xaml = f'<Section xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xml:space="preserve" TextAlignment="Left" LineHeight="Auto" IsHyphenationEnabled="False" xml:lang="es-pe" FlowDirection="LeftToRight" FontFamily="Segoe UI" FontSize="{font_size}" {bold_str} Foreground="#FF000000"><Paragraph><Run Background="{bg_color}">{text}</Run></Paragraph></Section>'
-    
-    rels = '<?xml version="1.0" encoding="utf-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships" />'
-    ct = '<?xml version="1.0" encoding="utf-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml" /><Default Extension="xaml" ContentType="application/xaml+xml" /></Types>'
-    
-    buf = io.BytesIO()
-    with zipfile.ZipFile(buf, 'w', compression=zipfile.ZIP_DEFLATED) as z:
-        z.writestr('Xaml/Document.xaml', xaml.encode('utf-8'))
-        z.writestr('_rels/.rels', rels.encode('utf-8'))
-        z.writestr('[Content_Types].xml', ct.encode('utf-8'))
-    return buf.getvalue()
+def build_additive_chain(terms):
+    """Construye un árbol binario MathML izquierdo para suma y resta algebraica."""
+    acc = None
+    for sign, el in terms:
+        if acc is None:
+            if sign == '+':
+                acc = el
+            else:
+                acc = ET.Element(tag_ml('apply'))
+                ET.SubElement(acc, tag_ml('minus'))
+                acc.append(el)
+        else:
+            new_acc = ET.Element(tag_ml('apply'))
+            op = 'plus' if sign == '+' else 'minus'
+            ET.SubElement(new_acc, tag_ml(op))
+            new_acc.append(acc)
+            new_acc.append(el)
+            acc = new_acc
+    return acc if acc is not None else make_real(0)
 
 
-def generate_mcdx_for_beam(beam: BeamModel, output_mcdx_path: str, base_template_path: str) -> str:
-    """Construye un archivo .mcdx completamente estructurado e incrusta el diagrama de la viga."""
+def generate_mcdx_for_beam(beam: BeamModel, output_mcdx_path: str, base_template_path: str = None) -> str:
+    """
+    Construye un archivo .mcdx dinámico compatible al 100% con Mathcad Prime 11.
+    Toma la plantilla maestra certificada de 10 tramos y actualiza parámetros,
+    diagrama de la viga y funciones de singularidad Macaulay para M(x) y Q(x).
+    """
+    if base_template_path is None or not os.path.exists(base_template_path):
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        base_template_path = os.path.join(base_dir, "PLANTILLA_MAESTRA_10_TRAMOS_VIGAS.mcdx")
+
     files = {}
     with zipfile.ZipFile(base_template_path, 'r') as z:
         for name in z.namelist():
             files[name] = z.read(name)
 
-    # 1. Generar la imagen del esquema de la viga y agregarla al paquete
-    beam_img = render_beam_diagram(beam, width=1400, height=450, show_cuts=True)
-    img_buf = io.BytesIO()
-    beam_img.save(img_buf, format="PNG")
-    img_bytes = img_buf.getvalue()
-    files['mathcad/media/Image_Beam.png'] = img_bytes
+    # 1. Renderizar e incrustar diagrama gráfico vectorial de la viga
+    img_beam = render_beam_diagram(beam, width=1400, height=420, show_cuts=True)
+    buf_beam = io.BytesIO()
+    img_beam.save(buf_beam, format="PNG")
+    files['mathcad/media/Image0.png'] = buf_beam.getvalue()
 
-    # 2. Reconstruir worksheet.xml
+    # 2. Cargar XML del worksheet
     ws_root = ET.fromstring(files['mathcad/worksheet.xml'])
-    regions_parent = ws_root[0]
-    
-    # Extraer plantillas de gráficos originales
-    plot_q_orig = None
-    plot_m_orig = None
-    for r in list(regions_parent):
-        if r.attrib.get('region-id') == '29':
-            plot_q_orig = r
-        elif r.attrib.get('region-id') == '30':
-            plot_m_orig = r
+    regs = ws_root[0]
 
-    regions_parent.clear()
-    reg_id_counter = 0
+    # A) Actualizar Longitudes L1 a L10 (Regiones 2 a 11)
+    spans_10 = beam.spans + [0.0] * (10 - len(beam.spans))
+    for i in range(10):
+        reg = regs[2 + i]
+        for r_el in reg.iter(tag_ml('real')):
+            r_el.text = f"{spans_10[i]:g}"
 
-    # Secciones de texto
-    sections = [
-        ("ANÁLISIS ESTRUCTURAL II — DIAGRAMAS EN MATHCAD (MÉTODO DE MACAULAY)", 17, True, "#FFFFF200"),
-        ("1. GEOMETRÍA Y DISCRETIZACIÓN DE LA VIGA:", 13, True, "#FFE0E0E0"),
-        ("ESQUEMA ESTRUCTURAL DE LA VIGA Y CORTES DE SECCIÓN:", 13, True, "#FFE0E0E0"),
-        ("2. CARGAS APLICADAS (DISTRIBUIDAS, PUNTUALES Y MOMENTOS):", 13, True, "#FFE0E0E0"),
-        ("3. CÁLCULO DE REACCIONES DE APOYO:", 13, True, "#FFE0E0E0"),
-        ("4. FUNCIONES DE SECCIÓN: MOMENTO M(x) Y CORTANTE Q(x):", 13, True, "#FFE0E0E0"),
-        ("5. RANGO DE EVALUACIÓN MILIMÉTRICO:", 13, True, "#FFE0E0E0"),
-        ("6. DIAGRAMAS DE FUERZA CORTANTE (DFC) Y MOMENTO FLECTOR (DMF):", 13, True, "#FFE0E0E0")
-    ]
+    # B) Actualizar Cargas Distribuidas q1 a q10 (Regiones 25 a 34)
+    for i in range(10):
+        q_val = beam.distributed_loads.get(i, 0.0)
+        reg = regs[25 + i]
+        for r_el in reg.iter(tag_ml('real')):
+            r_el.text = f"{q_val:g}"
 
-    # Crear paquetes XAML y registrar relaciones
-    rels_xml = '<?xml version="1.0" encoding="utf-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-    for idx, (sec_text, fsize, is_bold, bg) in enumerate(sections):
-        pkg_path = f"mathcad/xaml/FlowDocument{idx}.XamlPackage"
-        files[pkg_path] = make_xaml_package(sec_text, fsize, is_bold, bg)
-        rels_xml += f'<Relationship Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/flowDocument" Target="/{pkg_path}" Id="RelFlowDoc{idx}" />'
-    
-    # Relación de la imagen
-    rels_xml += '<Relationship Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="/mathcad/media/Image_Beam.png" Id="RelImageBeam" />'
-    rels_xml += '</Relationships>'
-    files['mathcad/_rels/worksheet.xml.rels'] = rels_xml.encode('utf-8')
+    # C) Actualizar Cargas Puntuales P0 a P10 (Regiones 35 a 45)
+    for i in range(11):
+        p_val = beam.point_loads.get(i, 0.0)
+        reg = regs[35 + i]
+        for r_el in reg.iter(tag_ml('real')):
+            r_el.text = f"{p_val:g}"
 
-    cur_top = 20.0
-    left_margin = 37.8
+    # D) Actualizar Momentos Aplicados M0 a M10 (Regiones 46 a 56)
+    for i in range(11):
+        m_val = beam.applied_moments.get(i, 0.0)
+        reg = regs[46 + i]
+        for r_el in reg.iter(tag_ml('real')):
+            r_el.text = f"{m_val:g}"
 
-    def add_text_reg(sec_idx, top_offset=30.0):
-        nonlocal reg_id_counter, cur_top
-        cur_top += top_offset
-        r = ET.Element(tag_ws('region'), {
-            'region-id': str(reg_id_counter),
-            'top': f'{cur_top:.1f}',
-            'left': f'{left_margin:.1f}'
-        })
-        ET.SubElement(r, tag_ws('text'), {'item-idref': f'RelFlowDoc{sec_idx}'})
-        regions_parent.append(r)
-        reg_id_counter += 1
-
-    def add_math(math_child, top=None, left=None):
-        nonlocal reg_id_counter, cur_top
-        if top is None:
-            top = cur_top
-        if left is None:
-            left = left_margin
-        r = make_region_math(reg_id_counter, top, left, math_child)
-        regions_parent.append(r)
-        reg_id_counter += 1
-
-    # Título principal
-    add_text_reg(0, top_offset=10.0)
-
-    # 1. Geometría
-    add_text_reg(1, top_offset=30.0)
-
-    # Definir longitudes de tramos (hasta 10)
-    cur_top += 25.0
-    all_spans = beam.spans + [0.0] * (10 - len(beam.spans))
-    # Fila 1 (L1 a L5)
-    for i in range(5):
-        def_L = make_define(make_id("L", subscript=i+1), make_scaled(all_spans[i], beam.unit_length))
-        add_math(def_L, top=cur_top, left=left_margin + i * 115.0)
-
-    # Fila 2 (L6 a L10)
-    cur_top += 28.0
-    for i in range(5, 10):
-        def_L = make_define(make_id("L", subscript=i+1), make_scaled(all_spans[i], beam.unit_length))
-        add_math(def_L, top=cur_top, left=left_margin + (i - 5) * 115.0)
-
-    # Nodos acumulados x0 a x10
-    cur_top += 30.0
-    # x0 := 0 m
-    add_math(make_define(make_id("x", subscript=0), make_scaled(0.0, beam.unit_length)), top=cur_top, left=left_margin)
-    for i in range(1, 5):
-        if i == 1:
-            expr = make_id("L", is_contextual=True, subscript=1)
-        else:
-            expr = make_apply('plus', make_id("x", is_contextual=True, subscript=i-1), make_id("L", is_contextual=True, subscript=i))
-        add_math(make_define(make_id("x", subscript=i), expr), top=cur_top, left=left_margin + i * 115.0)
-
-    cur_top += 28.0
-    for i in range(5, 11):
-        expr = make_apply('plus', make_id("x", is_contextual=True, subscript=i-1), make_id("L", is_contextual=True, subscript=i))
-        add_math(make_define(make_id("x", subscript=i), expr), top=cur_top, left=left_margin + (i - 5) * 115.0)
-
-    # Ltot := x10
-    cur_top += 30.0
-    add_math(make_define(make_id("L", subscript="tot"), make_id("x", is_contextual=True, subscript=10)), top=cur_top, left=left_margin)
-
-    # Imagen del esquema de la viga
-    add_text_reg(2, top_offset=30.0)
-    cur_top += 25.0
-    reg_img = ET.Element(tag_ws('region'), {
-        'region-id': str(reg_id_counter),
-        'top': f'{cur_top:.1f}',
-        'left': f'{left_margin:.1f}'
-    })
-    ET.SubElement(reg_img, tag_ws('picture'), {
-        'item-idref': 'RelImageBeam',
-        'image-format': 'png',
-        'display-width': '620',
-        'display-height': '200'
-    })
-    regions_parent.append(reg_img)
-    reg_id_counter += 1
-    cur_top += 205.0
-
-    # 2. Cargas Aplicadas
-    add_text_reg(3, top_offset=25.0)
-
-    # Cargas distribuidas q1 a q10
-    cur_top += 25.0
-    all_qs = [beam.distributed_loads.get(i, 0.0) for i in range(10)]
-    for i in range(5):
-        add_math(make_define(make_id("q", subscript=i+1), make_scaled(all_qs[i], beam.unit_dist_force)), top=cur_top, left=left_margin + i * 115.0)
-    cur_top += 28.0
-    for i in range(5, 10):
-        add_math(make_define(make_id("q", subscript=i+1), make_scaled(all_qs[i], beam.unit_dist_force)), top=cur_top, left=left_margin + (i - 5) * 115.0)
-
-    # Cargas puntuales P0 a P10
-    cur_top += 30.0
-    all_ps = [beam.point_loads.get(i, 0.0) for i in range(11)]
-    for i in range(6):
-        add_math(make_define(make_id("P", subscript=i), make_scaled(all_ps[i], beam.unit_force)), top=cur_top, left=left_margin + i * 115.0)
-    cur_top += 28.0
-    for i in range(6, 11):
-        add_math(make_define(make_id("P", subscript=i), make_scaled(all_ps[i], beam.unit_force)), top=cur_top, left=left_margin + (i - 6) * 115.0)
-
-    # Momentos aplicados M0 a M10
-    cur_top += 30.0
-    all_ms = [beam.applied_moments.get(i, 0.0) for i in range(11)]
-    for i in range(6):
-        add_math(make_define(make_id("M", subscript=i), make_scaled(all_ms[i], beam.unit_moment)), top=cur_top, left=left_margin + i * 115.0)
-    cur_top += 28.0
-    for i in range(6, 11):
-        add_math(make_define(make_id("M", subscript=i), make_scaled(all_ms[i], beam.unit_moment)), top=cur_top, left=left_margin + (i - 6) * 115.0)
-
-    # 3. Reacciones de apoyo
-    add_text_reg(4, top_offset=30.0)
+    # E) Calcular Reacciones y actualizar variables de apoyo
     reactions = beam.calculate_reactions()
-    cur_top += 25.0
-    val_vd = reactions.get("VD", 35.0)
-    val_va = reactions.get("VA", 23.0)
-    add_math(make_define(make_id("V", subscript="D"), make_scaled(val_vd, beam.unit_force)), top=cur_top, left=left_margin)
-    add_math(make_define(make_id("V", subscript="A"), make_scaled(val_va, beam.unit_force)), top=cur_top, left=left_margin + 200.0)
-
-    # 4. Funciones de Secciones M(x) y Q(x)
-    add_text_reg(5, top_offset=30.0)
-    cur_top += 25.0
-
-    # M(x)
-    fn_m_target = ET.Element(tag_ml('function'))
-    fn_m_target.append(make_id("M"))
-    bvars_m = ET.SubElement(fn_m_target, tag_ml('boundVars'))
-    bvars_m.append(make_id("x"))
-
-    m_expr = make_apply('mult', make_id("V", is_contextual=True, subscript="A"), make_id("x", is_contextual=True))
+    sup_nodes = sorted(beam.supports.keys())
     
-    # Tramo 1 distribuida activa y superada
-    cond_q1_act = make_parens(make_apply('greaterThan', make_apply('greaterThan', make_id("x", is_contextual=True, subscript=1), make_id("x", is_contextual=True)), make_id("x", is_contextual=True, subscript=0)))
-    term_q1_act = make_apply('mult', make_apply('mult', cond_q1_act, make_id("q", is_contextual=True, subscript=1)), make_apply('div', make_apply('pow', make_id("x", is_contextual=True), make_real(2)), make_real(2)))
-    m_expr = make_apply('minus', m_expr, term_q1_act)
+    val_va = reactions.get("VA", 0.0)
+    val_vd = reactions.get("VD", reactions.get("MA", 0.0))
 
-    cond_q1_sup = make_parens(make_apply('greaterOrEqual', make_id("x", is_contextual=True), make_id("x", is_contextual=True, subscript=1)))
-    arm_q1_sup = make_parens(make_apply('minus', make_id("x", is_contextual=True), make_apply('div', make_id("L", is_contextual=True, subscript=1), make_real(2))))
-    term_q1_sup = make_apply('mult', make_apply('mult', make_apply('mult', cond_q1_sup, make_id("q", is_contextual=True, subscript=1)), make_id("L", is_contextual=True, subscript=1)), arm_q1_sup)
-    m_expr = make_apply('minus', m_expr, term_q1_sup)
+    # Región 58: VD
+    for r_el in regs[58].iter(tag_ml('real')):
+        r_el.text = f"{val_vd:.4f}" if isinstance(val_vd, float) else str(val_vd)
 
-    # Momento nodo 1
-    cond_m1 = make_parens(make_apply('greaterOrEqual', make_id("x", is_contextual=True), make_id("x", is_contextual=True, subscript=1)))
-    term_m1 = make_apply('mult', cond_m1, make_id("M", is_contextual=True, subscript=1))
-    m_expr = make_apply('plus', m_expr, term_m1)
+    # Región 59: VA
+    for r_el in regs[59].iter(tag_ml('real')):
+        r_el.text = f"{val_va:.4f}" if isinstance(val_va, float) else str(val_va)
 
-    # Carga puntual nodo 2
-    cond_p2 = make_parens(make_apply('greaterOrEqual', make_id("x", is_contextual=True), make_id("x", is_contextual=True, subscript=2)))
-    arm_p2 = make_parens(make_apply('minus', make_id("x", is_contextual=True), make_id("x", is_contextual=True, subscript=2)))
-    term_p2 = make_apply('mult', make_apply('mult', cond_p2, make_id("P", is_contextual=True, subscript=2)), arm_p2)
-    m_expr = make_apply('minus', m_expr, term_p2)
+    # F) Construcción Dinámica de Expresiones Macaulay para M(x) y Q(x)
+    terms_m = []
+    terms_q = []
 
-    # Reacción apoyo D (nodo 3)
-    cond_vd = make_parens(make_apply('greaterOrEqual', make_id("x", is_contextual=True), make_id("x", is_contextual=True, subscript=3)))
-    arm_vd = make_parens(make_apply('minus', make_id("x", is_contextual=True), make_id("x", is_contextual=True, subscript=3)))
-    term_vd = make_apply('mult', make_apply('mult', cond_vd, make_id("V", is_contextual=True, subscript="D")), arm_vd)
-    m_expr = make_apply('plus', m_expr, term_vd)
+    # 1. Apoyos y Reacciones
+    if len(sup_nodes) >= 2:
+        n_a, n_b = sup_nodes[0], sup_nodes[1]
+        
+        # Apoyo A
+        if n_a == 0:
+            terms_m.append(('+', make_apply('mult', make_id("V", subscript="A"), make_id("x"))))
+            terms_q.append(('+', make_id("V", subscript="A")))
+        else:
+            cond_va = make_parens(make_apply('greaterOrEqual', make_id("x"), make_id("x", subscript=n_a)))
+            arm_va = make_parens(make_apply('minus', make_id("x"), make_id("x", subscript=n_a)))
+            terms_m.append(('+', make_apply('mult', make_apply('mult', cond_va, make_id("V", subscript="A")), arm_va)))
+            terms_q.append(('+', make_apply('mult', cond_va, make_id("V", subscript="A"))))
 
-    add_math(make_define(fn_m_target, m_expr), top=cur_top, left=left_margin)
+        # Apoyo B
+        cond_vb = make_parens(make_apply('greaterOrEqual', make_id("x"), make_id("x", subscript=n_b)))
+        arm_vb = make_parens(make_apply('minus', make_id("x"), make_id("x", subscript=n_b)))
+        terms_m.append(('+', make_apply('mult', make_apply('mult', cond_vb, make_id("V", subscript="D")), arm_vb)))
+        terms_q.append(('+', make_apply('mult', cond_vb, make_id("V", subscript="D"))))
 
-    # Q(x)
-    cur_top += 55.0
-    fn_q_target = ET.Element(tag_ml('function'))
-    fn_q_target.append(make_id("Q"))
-    bvars_q = ET.SubElement(fn_q_target, tag_ml('boundVars'))
-    bvars_q.append(make_id("x"))
+    elif len(sup_nodes) == 1 and beam.supports[sup_nodes[0]] == 'fixed':
+        n_fix = sup_nodes[0]
+        # Empotramiento en el origen
+        if n_fix == 0:
+            terms_m.append(('+', make_id("V", subscript="D")))  # VD actúa como MA
+            terms_m.append(('+', make_apply('mult', make_id("V", subscript="A"), make_id("x"))))
+            terms_q.append(('+', make_id("V", subscript="A")))
+        else:
+            cond_fix = make_parens(make_apply('greaterOrEqual', make_id("x"), make_id("x", subscript=n_fix)))
+            arm_fix = make_parens(make_apply('minus', make_id("x"), make_id("x", subscript=n_fix)))
+            terms_m.append(('+', make_apply('mult', cond_fix, make_id("V", subscript="D"))))
+            terms_m.append(('+', make_apply('mult', make_apply('mult', cond_fix, make_id("V", subscript="A")), arm_fix)))
+            terms_q.append(('+', make_apply('mult', cond_fix, make_id("V", subscript="A"))))
+    else:
+        # Por defecto dos apoyos en 0 y tramo final
+        terms_m.append(('+', make_apply('mult', make_id("V", subscript="A"), make_id("x"))))
+        terms_q.append(('+', make_id("V", subscript="A")))
 
-    q_expr = make_id("V", is_contextual=True, subscript="A")
-    term_q1_act_v = make_apply('mult', make_apply('mult', cond_q1_act, make_id("q", is_contextual=True, subscript=1)), make_id("x", is_contextual=True))
-    q_expr = make_apply('minus', q_expr, term_q1_act_v)
+    # 2. Cargas Distribuidas
+    for k in range(len(beam.spans)):
+        q_val = beam.distributed_loads.get(k, 0.0)
+        if q_val != 0:
+            # Condición de tramo activo: x_(k+1) > x > x_k
+            cond_act = make_parens(make_apply('greaterThan',
+                make_apply('greaterThan', make_id("x", subscript=k+1), make_id("x")),
+                make_id("x", subscript=k)))
+            
+            if k == 0:
+                arm_sq = make_apply('div', make_apply('pow', make_id("x"), make_real(2)), make_real(2))
+                arm_v = make_id("x")
+            else:
+                arm_diff = make_parens(make_apply('minus', make_id("x"), make_id("x", subscript=k)))
+                arm_sq = make_apply('div', make_apply('pow', arm_diff, make_real(2)), make_real(2))
+                arm_v = arm_diff
+                
+            term_m_act = make_apply('mult', make_apply('mult', cond_act, make_id("q", subscript=k+1)), arm_sq)
+            term_q_act = make_apply('mult', make_apply('mult', cond_act, make_id("q", subscript=k+1)), arm_v)
+            terms_m.append(('-', term_m_act))
+            terms_q.append(('-', term_q_act))
 
-    term_q1_sup_v = make_apply('mult', make_apply('mult', cond_q1_sup, make_id("q", is_contextual=True, subscript=1)), make_id("L", is_contextual=True, subscript=1))
-    q_expr = make_apply('minus', q_expr, term_q1_sup_v)
+            # Condición de tramo superado: x >= x_(k+1)
+            cond_sup = make_parens(make_apply('greaterOrEqual', make_id("x"), make_id("x", subscript=k+1)))
+            if k == 0:
+                arm_cg = make_parens(make_apply('minus', make_id("x"), make_apply('div', make_id("L", subscript=1), make_real(2))))
+            else:
+                cg_pos = make_parens(make_apply('plus', make_id("x", subscript=k), make_apply('div', make_id("L", subscript=k+1), make_real(2))))
+                arm_cg = make_parens(make_apply('minus', make_id("x"), cg_pos))
+                
+            term_m_sup = make_apply('mult', make_apply('mult', make_apply('mult', cond_sup, make_id("q", subscript=k+1)), make_id("L", subscript=k+1)), arm_cg)
+            term_q_sup = make_apply('mult', make_apply('mult', cond_sup, make_id("q", subscript=k+1)), make_id("L", subscript=k+1))
+            terms_m.append(('-', term_m_sup))
+            terms_q.append(('-', term_q_sup))
 
-    term_p2_v = make_apply('mult', cond_p2, make_id("P", is_contextual=True, subscript=2))
-    q_expr = make_apply('minus', q_expr, term_p2_v)
+    # 3. Momentos Aplicados
+    for i in range(len(beam.spans) + 1):
+        m_val = beam.applied_moments.get(i, 0.0)
+        if m_val != 0:
+            if i == 0:
+                terms_m.append(('+', make_id("M", subscript=0)))
+            else:
+                cond_m = make_parens(make_apply('greaterOrEqual', make_id("x"), make_id("x", subscript=i)))
+                terms_m.append(('+', make_apply('mult', cond_m, make_id("M", subscript=i))))
 
-    term_vd_v = make_apply('mult', cond_vd, make_id("V", is_contextual=True, subscript="D"))
-    q_expr = make_apply('plus', q_expr, term_vd_v)
+    # 4. Cargas Puntuales
+    for i in range(len(beam.spans) + 1):
+        p_val = beam.point_loads.get(i, 0.0)
+        if p_val != 0:
+            if i == 0:
+                terms_m.append(('-', make_apply('mult', make_id("P", subscript=0), make_id("x"))))
+                terms_q.append(('-', make_id("P", subscript=0)))
+            else:
+                cond_p = make_parens(make_apply('greaterOrEqual', make_id("x"), make_id("x", subscript=i)))
+                arm_p = make_parens(make_apply('minus', make_id("x"), make_id("x", subscript=i)))
+                term_p_m = make_apply('mult', make_apply('mult', cond_p, make_id("P", subscript=i)), arm_p)
+                term_p_q = make_apply('mult', cond_p, make_id("P", subscript=i))
+                terms_m.append(('-', term_p_m))
+                terms_q.append(('-', term_p_q))
 
-    cond_p4 = make_parens(make_apply('greaterOrEqual', make_id("x", is_contextual=True), make_id("x", is_contextual=True, subscript=4)))
-    term_p4_v = make_apply('mult', cond_p4, make_id("P", is_contextual=True, subscript=4))
-    q_expr = make_apply('minus', q_expr, term_p4_v)
+    # Reemplazar definición de M(x) en Región 61
+    reg_61_math = regs[61].find(tag_ws('math'))
+    reg_61_def = reg_61_math.find(tag_ml('define'))
+    reg_61_def[1] = build_additive_chain(terms_m)
 
-    add_math(make_define(fn_q_target, q_expr), top=cur_top, left=left_margin)
+    # Reemplazar definición de Q(x) en Región 62
+    reg_62_math = regs[62].find(tag_ws('math'))
+    reg_62_def = reg_62_math.find(tag_ml('define'))
+    reg_62_def[1] = build_additive_chain(terms_q)
 
-    # 5. Rango
-    add_text_reg(6, top_offset=45.0)
-    cur_top += 25.0
-    def_x_range = ET.Element(tag_ml('define'))
-    def_x_range.append(make_id("x"))
-    range_el = ET.SubElement(def_x_range, tag_ml('range'))
-    seq_el = ET.SubElement(range_el, tag_ml('sequence'))
-    seq_el.append(make_scaled(0.0, beam.unit_length))
-    seq_el.append(make_scaled(0.001, beam.unit_length))
-    range_el.append(make_id("L", is_contextual=True, subscript="tot"))
-    add_math(def_x_range, top=cur_top, left=left_margin)
+    # G) Ajustar dimensiones de la imagen en Región 24
+    r24 = regs[24]
+    r24.attrib['width'] = '550'
+    r24.attrib['height'] = '165'
+    png_el = r24.find(f"{tag_ws('picture')}/{tag_ws('png')}")
+    if png_el is not None:
+        png_el.attrib['display-width'] = '550'
+        png_el.attrib['display-height'] = '165'
 
-    # 6. Gráficos
-    add_text_reg(7, top_offset=30.0)
-    cur_top += 25.0
-
-    if plot_q_orig is not None:
-        plot_q_orig.attrib['region-id'] = str(reg_id_counter)
-        plot_q_orig.attrib['top'] = f'{cur_top:.1f}'
-        plot_q_orig.attrib['left'] = f'{left_margin:.1f}'
-        regions_parent.append(plot_q_orig)
-        reg_id_counter += 1
-
-    cur_top += 250.0
-    if plot_m_orig is not None:
-        plot_m_orig.attrib['region-id'] = str(reg_id_counter)
-        plot_m_orig.attrib['top'] = f'{cur_top:.1f}'
-        plot_m_orig.attrib['left'] = f'{left_margin:.1f}'
-        regions_parent.append(plot_m_orig)
-        reg_id_counter += 1
-
+    # 3. Guardar el archivo XML modificado en el paquete .mcdx
     files['mathcad/worksheet.xml'] = ET.tostring(ws_root, encoding='utf-8', xml_declaration=True)
+
+    output_dir = os.path.dirname(os.path.abspath(output_mcdx_path))
+    os.makedirs(output_dir, exist_ok=True)
 
     with zipfile.ZipFile(output_mcdx_path, 'w', compression=zipfile.ZIP_DEFLATED) as z:
         for name, content in files.items():
