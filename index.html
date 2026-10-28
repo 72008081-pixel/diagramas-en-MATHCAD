@@ -1739,7 +1739,7 @@
 
         function mkParens(child) {
           const el = xmlDoc.createElementNS(ML_NS, 'ml:parens');
-          el.appendChild(child);
+          el.appendChild(child.cloneNode(true));
           return el;
         }
 
@@ -1747,19 +1747,22 @@
           const el = xmlDoc.createElementNS(ML_NS, 'ml:apply');
           const op = xmlDoc.createElementNS(ML_NS, `ml:${opName}`);
           el.appendChild(op);
-          for (const a of args) el.appendChild(a);
+          for (const a of args) {
+            el.appendChild(a.cloneNode(true));
+          }
           return el;
         }
 
         function buildChain(terms) {
           let acc = null;
           for (const [sign, el] of terms) {
+            const elClone = el.cloneNode(true);
             if (!acc) {
-              if (sign === '+') acc = el;
-              else acc = mkApply('minus', el);
+              if (sign === '+') acc = elClone;
+              else acc = mkApply('minus', elClone);
             } else {
               const op = (sign === '+') ? 'plus' : 'minus';
-              acc = mkApply(op, acc, el);
+              acc = mkApply(op, acc, elClone);
             }
           }
           return acc || mkReal(0);
@@ -1831,7 +1834,7 @@
               armCg = mkParens(mkApply('minus', mkId('x'), cgPos));
             }
             termsM.push(['-', mkApply('mult', mkApply('mult', mkApply('mult', condSup, mkId('q', k+1)), mkId('L', k+1)), armCg)]);
-            termsQ.push(['-', mkApply('mult', condSup, mkApply('mult', mkId('q', k+1), mkId('L', k+1)))]);
+            termsQ.push(['-', mkApply('mult', mkApply('mult', condSup, mkId('q', k+1)), mkId('L', k+1))]);
           }
         }
 
