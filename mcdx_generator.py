@@ -390,6 +390,34 @@ def generate_mcdx_for_beam(beam: BeamModel, output_mcdx_path: str, base_template
     set_pos('66', 865.0, 37.8, w=650, h=230)
     set_pos('67', 1135.0, 37.8, w=650, h=230)
 
+    # I) ESCUDO SANITIZADOR UNIVERSAL (Garantía de Esquema Mathcad Prime 11)
+    # 1. positionticmark estrictamente entero (xs:integer)
+    for aline in ws_root.iter(tag_ws('axisLine')):
+        ptm = aline.attrib.get('positionticmark')
+        if ptm is not None:
+            try:
+                val = float(ptm)
+                aline.attrib['positionticmark'] = str(int(round(val)))
+            except ValueError:
+                aline.attrib['positionticmark'] = '0'
+
+    # 2. Sanitizar elementos apply incompletos si los hubiera
+    binary_ops = {'mult', 'div', 'pow', 'greaterThan', 'greaterOrEqual'}
+    for parent in ws_root.iter():
+        for child in list(parent):
+            if child.tag == tag_ml('apply'):
+                if len(child) == 0:
+                    parent.remove(child)
+                else:
+                    op_tag = child[0].tag.split('}')[-1]
+                    num_args = len(child) - 1
+                    if op_tag in binary_ops and num_args == 1:
+                        # Reemplazar apply incompleto por su único operando
+                        arg = child[1]
+                        idx = list(parent).index(child)
+                        parent.insert(idx, arg)
+                        parent.remove(child)
+
     # 3. Guardar el archivo XML modificado en el paquete .mcdx
     files['mathcad/worksheet.xml'] = ET.tostring(ws_root, encoding='utf-8', xml_declaration=True)
 

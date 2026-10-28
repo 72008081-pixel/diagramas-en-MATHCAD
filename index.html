@@ -1946,6 +1946,48 @@
           }
         }
 
+        // 9.5 ESCUDO SANITIZADOR PRE-EXPORTACIÓN (Garantía 100% Esquema Mathcad Prime 11)
+        // A) Sanitizar todos los axisLine: positionticmark DEBE ser estrictamente entero xs:integer
+        const allAxisLines = xmlDoc.querySelectorAll('axisLine');
+        allAxisLines.forEach(al => {
+          const ptm = al.getAttribute('positionticmark');
+          if (ptm !== null && ptm !== undefined) {
+            const num = parseFloat(ptm);
+            al.setAttribute('positionticmark', isNaN(num) ? '0' : Math.round(num).toString());
+          }
+        });
+
+        // B) Sanitizar todos los apply: validar operadores binarios y unarios
+        const binaryOps = new Set(['mult', 'div', 'pow', 'greaterThan', 'greaterOrEqual']);
+        const allApplies = xmlDoc.querySelectorAll('apply');
+        allApplies.forEach(ap => {
+          if (ap.children.length === 0) {
+            const z = xmlDoc.createElementNS(ML_NS, 'ml:real');
+            z.textContent = '0';
+            ap.appendChild(z);
+            return;
+          }
+          const opName = ap.children[0].localName;
+          const argCount = ap.children.length - 1;
+          if (binaryOps.has(opName) && argCount === 1) {
+            // Reemplazar el apply incompleto por su único argumento
+            const onlyArg = ap.children[1];
+            if (ap.parentNode) {
+              ap.parentNode.replaceChild(onlyArg.cloneNode(true), ap);
+            }
+          }
+        });
+
+        // C) Sanitizar parens vacíos
+        const allParens = xmlDoc.querySelectorAll('parens');
+        allParens.forEach(p => {
+          if (p.children.length === 0) {
+            const z = xmlDoc.createElementNS(ML_NS, 'ml:real');
+            z.textContent = '0';
+            p.appendChild(z);
+          }
+        });
+
         // Guardar worksheet.xml modificado
         const serializer = new XMLSerializer();
         const newXml = serializer.serializeToString(xmlDoc);
