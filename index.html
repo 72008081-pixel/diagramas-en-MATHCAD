@@ -1917,7 +1917,7 @@
             xAx.setAttribute('start', '0');
             xAx.setAttribute('end', Ltot.toFixed(2));
             const aline = xAx.querySelector('axisLine');
-            if (aline) aline.setAttribute('positionticmark', Ltot.toFixed(2));
+            if (aline) aline.setAttribute('positionticmark', Math.round(Ltot).toString());
           }
           const yAx = r66.querySelector('yAxis');
           if (yAx) {
@@ -1935,7 +1935,7 @@
             xAx.setAttribute('start', '0');
             xAx.setAttribute('end', Ltot.toFixed(2));
             const aline = xAx.querySelector('axisLine');
-            if (aline) aline.setAttribute('positionticmark', Ltot.toFixed(2));
+            if (aline) aline.setAttribute('positionticmark', Math.round(Ltot).toString());
           }
           const yAx = r67.querySelector('yAxis');
           if (yAx) {

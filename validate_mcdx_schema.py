@@ -24,6 +24,13 @@ def validate_mcdx(path):
                 errors.append(f"Region {rid}: Op <minus> has {num_args} args (expected 1 or 2)!")
             elif op_tag == 'plus' and num_args < 2:
                 errors.append(f"Region {rid}: Op <plus> has {num_args} args (expected >= 2)!")
+
+    # 2. Check positionticmark attribute in all axisLine elements (must be xs:integer)
+    import re
+    for aline in root.iter('{http://schemas.mathsoft.com/worksheet50}axisLine'):
+        ptm = aline.attrib.get('positionticmark')
+        if ptm is not None and not re.match(r'^-?\d+$', ptm):
+            errors.append(f"axisLine positionticmark='{ptm}' is NOT a valid integer!")
                 
     if errors:
         print(f"FAILED with {len(errors)} errors:")

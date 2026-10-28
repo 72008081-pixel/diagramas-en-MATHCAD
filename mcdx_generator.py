@@ -307,7 +307,7 @@ def generate_mcdx_for_beam(beam: BeamModel, output_mcdx_path: str, base_template
                 x_ax.attrib['end'] = f"{total_l:g}"
                 aline = x_ax.find(tag_ws('axisLine'))
                 if aline is not None:
-                    aline.attrib['positionticmark'] = f"{total_l:g}"
+                    aline.attrib['positionticmark'] = str(int(round(total_l)))
             y_ax = p66.find(f".//{tag_ws('yAxis')}")
             if y_ax is not None:
                 y_ax.attrib['start'] = f"{q_lim_min:.1f}"
@@ -326,7 +326,7 @@ def generate_mcdx_for_beam(beam: BeamModel, output_mcdx_path: str, base_template
                 x_ax.attrib['end'] = f"{total_l:g}"
                 aline = x_ax.find(tag_ws('axisLine'))
                 if aline is not None:
-                    aline.attrib['positionticmark'] = f"{total_l:g}"
+                    aline.attrib['positionticmark'] = str(int(round(total_l)))
             y_ax = p67.find(f".//{tag_ws('yAxis')}")
             if y_ax is not None:
                 y_ax.attrib['start'] = f"{m_lim_min:.1f}"
