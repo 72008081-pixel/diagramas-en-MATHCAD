@@ -36,10 +36,11 @@ def validate_mcdx(path):
         print(f"FAILED with {len(errors)} errors:")
         for e in errors:
             print("  ❌", e)
-        return False
+        return False, errors
     else:
         print("✅ PASSED: All <apply> elements are complete and valid!")
-        return True
+        return True, []
 
-validate_mcdx(r'D:\Visitante\Documents\Viga_3Tramos_Mathcad_Prime_11 (1).mcdx')
-validate_mcdx(r'test_outputs/02_User_3Spans_q500.mcdx')
+if __name__ == '__main__':
+    target = sys.argv[1] if len(sys.argv) > 1 else r'D:\Visitante\Documents\Viga_3Tramos_Mathcad_Prime_11 (1).mcdx'
+    validate_mcdx(target)
