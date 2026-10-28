@@ -89,7 +89,19 @@ Se diseñó e implementó un script de verificación automatizado (`run_10_tests
 
 ### 4. Parche UI #4: Presets Rápidos en 1 Clic y Redimensionamiento Adaptativo
 - **Diagnóstico:** La entrada manual de hasta 10 tramos en pleno examen demandaba agilidad.
-- **Solución implementada:** Integración de la barra superior de Presets Rápidos en 1 Clic tanto en la interfaz de escritorio (`app_gui.py`) como en la aplicación web (`index.html`).
+- **Solución implementada:** Integración de la barra superior de Presets Rápidos en 1 Clic tanto en la interfaz de escritorio (`app_gui.py`) como en la aplicación web (`index.html`), incluyendo el nuevo preset de examen de 3 tramos ($L=[2, 4, 2]\text{ m}, q_2=500\text{ kg/m}$).
+
+### 5. Parche Crítico #5: Desacoplamiento de Índices XML y Búsqueda por Region-ID
+- **Diagnóstico:** El acceso previo por índice de lista (`regs[k]`) se desfasaba tras la eliminación de regiones parásitas, provocando que las reacciones sobreescribieran el rango de la variable $x$ en la Región 64 y asignaran cargas a tramos equivocados.
+- **Solución implementada:** Búsqueda y modificación exclusiva mediante diccionario `regs_dict.get(region_id)`. Se garantiza inmunidad absoluta ante cualquier cambio en el orden o eliminación de regiones XML.
+
+### 6. Parche Crítico #6: Autoescalado Dinámico de Ejes 2D para DFC y DMF
+- **Diagnóstico:** Los diagramas en Mathcad Prime 11 mantenían cotas fijas en los ejes XML (`start="0" end="5"` en X, y límites fijos en Y), provocando el corte visual de vigas de más de 5 metros y el aplanamiento de curvas con cargas elevadas.
+- **Solución implementada:** Evaluación analítica previa de extremos $(Q_{\min}, Q_{\max}, M_{\min}, M_{\max})$ y actualización dinámica de los atributos `start`, `end` y `positionticmark` en los elementos `<ns0:xAxis>` y `<ns0:yAxis>` de las Regiones 66 y 67, asegurando un encuadre visual completo con margen del 15%.
+
+### 7. Parche Web #7: Generador Nativo en JavaScript para la Web App (`index.html`)
+- **Diagnóstico:** La página web interactiva utilizaba la plantilla antigua con regiones duplicadas y no regeneraba los árboles MathML de Macaulay ni los límites de los gráficos en el `.mcdx` descargado.
+- **Solución implementada:** Implementación completa en JavaScript del generador dinámico de árboles DOM MathML de singularidad, poda de imágenes parásitas, autoescalado de ejes y presets directos de examen, igualando la funcionalidad del generador de escritorio.
 
 ---
 

@@ -4,12 +4,14 @@ MCDX GENERATOR - CONSTRUCTOR DINÁMICO UNIVERSAL PARA MATHCAD PRIME 11
 =============================================================================
 Genera archivos nativos .mcdx completamente compatibles con PTC Mathcad Prime 11
 utilizando la estructura base validada de 10 tramos y funciones de Macaulay.
-Incrusta el esquema vectorial de la viga, cotas, cargas, apoyos y cortes.
+Incrusta el esquema vectorial de la viga, cotas, cargas, apoyos y cortes,
+escalando dinámicamente los límites de los ejes de los diagramas DFC y DMF.
 """
 
 import os
 import sys
 import io
+import math
 import zipfile
 import xml.etree.ElementTree as ET
 from PIL import Image
@@ -88,7 +90,8 @@ def generate_mcdx_for_beam(beam: BeamModel, output_mcdx_path: str, base_template
     """
     Construye un archivo .mcdx dinámico compatible al 100% con Mathcad Prime 11.
     Toma la plantilla maestra certificada de 10 tramos y actualiza parámetros,
-    diagrama de la viga y funciones de singularidad Macaulay para M(x) y Q(x).
+    diagrama de la viga, funciones de singularidad Macaulay para M(x) y Q(x),
+    y los límites de visualización de los gráficos 2D.
     """
     if base_template_path is None or not os.path.exists(base_template_path):
         base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -107,35 +110,48 @@ def generate_mcdx_for_beam(beam: BeamModel, output_mcdx_path: str, base_template
 
     # 2. Cargar XML del worksheet
     ws_root = ET.fromstring(files['mathcad/worksheet.xml'])
-    regs = ws_root[0]
+    regions_parent = ws_root[0]
+
+    # Eliminar imágenes repetidas/parásitas (R0, R1, R57, R60, R63, R65)
+    unwanted_ids = {'0', '1', '57', '60', '63', '65'}
+    for r in list(regions_parent):
+        if r.attrib.get('region-id') in unwanted_ids:
+            regions_parent.remove(r)
+
+    # Indexar TODAS las regiones por su 'region-id' estricto
+    regs_dict = {r.attrib.get('region-id'): r for r in regions_parent.findall(tag_ws('region'))}
 
     # A) Actualizar Longitudes L1 a L10 (Regiones 2 a 11)
     spans_10 = beam.spans + [0.0] * (10 - len(beam.spans))
     for i in range(10):
-        reg = regs[2 + i]
-        for r_el in reg.iter(tag_ml('real')):
-            r_el.text = f"{spans_10[i]:g}"
+        rid = str(2 + i)
+        if rid in regs_dict:
+            for r_el in regs_dict[rid].iter(tag_ml('real')):
+                r_el.text = f"{spans_10[i]:g}"
 
     # B) Actualizar Cargas Distribuidas q1 a q10 (Regiones 25 a 34)
     for i in range(10):
+        rid = str(25 + i)
         q_val = beam.distributed_loads.get(i, 0.0)
-        reg = regs[25 + i]
-        for r_el in reg.iter(tag_ml('real')):
-            r_el.text = f"{q_val:g}"
+        if rid in regs_dict:
+            for r_el in regs_dict[rid].iter(tag_ml('real')):
+                r_el.text = f"{q_val:g}"
 
     # C) Actualizar Cargas Puntuales P0 a P10 (Regiones 35 a 45)
     for i in range(11):
+        rid = str(35 + i)
         p_val = beam.point_loads.get(i, 0.0)
-        reg = regs[35 + i]
-        for r_el in reg.iter(tag_ml('real')):
-            r_el.text = f"{p_val:g}"
+        if rid in regs_dict:
+            for r_el in regs_dict[rid].iter(tag_ml('real')):
+                r_el.text = f"{p_val:g}"
 
     # D) Actualizar Momentos Aplicados M0 a M10 (Regiones 46 a 56)
     for i in range(11):
+        rid = str(46 + i)
         m_val = beam.applied_moments.get(i, 0.0)
-        reg = regs[46 + i]
-        for r_el in reg.iter(tag_ml('real')):
-            r_el.text = f"{m_val:g}"
+        if rid in regs_dict:
+            for r_el in regs_dict[rid].iter(tag_ml('real')):
+                r_el.text = f"{m_val:g}"
 
     # E) Calcular Reacciones y actualizar variables de apoyo
     reactions = beam.calculate_reactions()
@@ -145,12 +161,14 @@ def generate_mcdx_for_beam(beam: BeamModel, output_mcdx_path: str, base_template
     val_vd = reactions.get("VD", reactions.get("MA", 0.0))
 
     # Región 58: VD
-    for r_el in regs[58].iter(tag_ml('real')):
-        r_el.text = f"{val_vd:.4f}" if isinstance(val_vd, float) else str(val_vd)
+    if '58' in regs_dict:
+        for r_el in regs_dict['58'].iter(tag_ml('real')):
+            r_el.text = f"{val_vd:.4f}" if isinstance(val_vd, float) else str(val_vd)
 
     # Región 59: VA
-    for r_el in regs[59].iter(tag_ml('real')):
-        r_el.text = f"{val_va:.4f}" if isinstance(val_va, float) else str(val_va)
+    if '59' in regs_dict:
+        for r_el in regs_dict['59'].iter(tag_ml('real')):
+            r_el.text = f"{val_va:.4f}" if isinstance(val_va, float) else str(val_va)
 
     # F) Construcción Dinámica de Expresiones Macaulay para M(x) y Q(x)
     terms_m = []
@@ -178,7 +196,6 @@ def generate_mcdx_for_beam(beam: BeamModel, output_mcdx_path: str, base_template
 
     elif len(sup_nodes) == 1 and beam.supports[sup_nodes[0]] == 'fixed':
         n_fix = sup_nodes[0]
-        # Empotramiento en el origen
         if n_fix == 0:
             terms_m.append(('+', make_id("V", subscript="D")))  # VD actúa como MA
             terms_m.append(('+', make_apply('mult', make_id("V", subscript="A"), make_id("x"))))
@@ -190,7 +207,6 @@ def generate_mcdx_for_beam(beam: BeamModel, output_mcdx_path: str, base_template
             terms_m.append(('+', make_apply('mult', make_apply('mult', cond_fix, make_id("V", subscript="A")), arm_fix)))
             terms_q.append(('+', make_apply('mult', cond_fix, make_id("V", subscript="A"))))
     else:
-        # Por defecto dos apoyos en 0 y tramo final
         terms_m.append(('+', make_apply('mult', make_id("V", subscript="A"), make_id("x"))))
         terms_q.append(('+', make_id("V", subscript="A")))
 
@@ -198,7 +214,6 @@ def generate_mcdx_for_beam(beam: BeamModel, output_mcdx_path: str, base_template
     for k in range(len(beam.spans)):
         q_val = beam.distributed_loads.get(k, 0.0)
         if q_val != 0:
-            # Condición de tramo activo: x_(k+1) > x > x_k
             cond_act = make_parens(make_apply('greaterThan',
                 make_apply('greaterThan', make_id("x", subscript=k+1), make_id("x")),
                 make_id("x", subscript=k)))
@@ -255,27 +270,72 @@ def generate_mcdx_for_beam(beam: BeamModel, output_mcdx_path: str, base_template
                 terms_q.append(('-', term_p_q))
 
     # Reemplazar definición de M(x) en Región 61
-    reg_61 = next((r for r in regs if r.attrib.get('region-id') == '61'), None)
-    if reg_61 is not None:
-        reg_61_math = reg_61.find(tag_ws('math'))
-        reg_61_def = reg_61_math.find(tag_ml('define'))
-        reg_61_def[1] = build_additive_chain(terms_m)
+    if '61' in regs_dict:
+        reg_61_math = regs_dict['61'].find(tag_ws('math'))
+        if reg_61_math is not None:
+            reg_61_def = reg_61_math.find(tag_ml('define'))
+            if reg_61_def is not None:
+                reg_61_def[1] = build_additive_chain(terms_m)
 
     # Reemplazar definición de Q(x) en Región 62
-    reg_62 = next((r for r in regs if r.attrib.get('region-id') == '62'), None)
-    if reg_62 is not None:
-        reg_62_math = reg_62.find(tag_ws('math'))
-        reg_62_def = reg_62_math.find(tag_ml('define'))
-        reg_62_def[1] = build_additive_chain(terms_q)
+    if '62' in regs_dict:
+        reg_62_math = regs_dict['62'].find(tag_ws('math'))
+        if reg_62_math is not None:
+            reg_62_def = reg_62_math.find(tag_ml('define'))
+            if reg_62_def is not None:
+                reg_62_def[1] = build_additive_chain(terms_q)
 
-    # G) Eliminar imágenes repetidas/parásitas (R0, R1, R57, R60, R63, R65)
-    unwanted_ids = {'0', '1', '57', '60', '63', '65'}
-    for r in list(regs):
-        if r.attrib.get('region-id') in unwanted_ids:
-            regs.remove(r)
+    # G) Escalamiento dinámico de límites de visualización de gráficos 2D (Regiones 66 y 67)
+    total_l = beam.total_length if beam.total_length > 0 else 1.0
+    q_min, q_max, m_min, m_max = beam.compute_internal_force_extrema()
+    
+    q_span = max(abs(q_max - q_min), 10.0)
+    q_lim_min = q_min - 0.15 * q_span
+    q_lim_max = q_max + 0.15 * q_span
+
+    m_span = max(abs(m_max - m_min), 10.0)
+    m_lim_min = m_min - 0.15 * m_span
+    m_lim_max = m_max + 0.15 * m_span
+
+    # Actualizar Ejes en Gráfico Q(x) (Región 66)
+    if '66' in regs_dict:
+        p66 = regs_dict['66'].find(tag_ws('plot'))
+        if p66 is not None:
+            x_ax = p66.find(f".//{tag_ws('xAxis')}")
+            if x_ax is not None:
+                x_ax.attrib['start'] = "0"
+                x_ax.attrib['end'] = f"{total_l:g}"
+                aline = x_ax.find(tag_ws('axisLine'))
+                if aline is not None:
+                    aline.attrib['positionticmark'] = f"{total_l:g}"
+            y_ax = p66.find(f".//{tag_ws('yAxis')}")
+            if y_ax is not None:
+                y_ax.attrib['start'] = f"{q_lim_min:.1f}"
+                y_ax.attrib['end'] = f"{q_lim_max:.1f}"
+                aline = y_ax.find(tag_ws('axisLine'))
+                if aline is not None:
+                    aline.attrib['positionticmark'] = "0"
+
+    # Actualizar Ejes en Gráfico M(x) (Región 67)
+    if '67' in regs_dict:
+        p67 = regs_dict['67'].find(tag_ws('plot'))
+        if p67 is not None:
+            x_ax = p67.find(f".//{tag_ws('xAxis')}")
+            if x_ax is not None:
+                x_ax.attrib['start'] = "0"
+                x_ax.attrib['end'] = f"{total_l:g}"
+                aline = x_ax.find(tag_ws('axisLine'))
+                if aline is not None:
+                    aline.attrib['positionticmark'] = f"{total_l:g}"
+            y_ax = p67.find(f".//{tag_ws('yAxis')}")
+            if y_ax is not None:
+                y_ax.attrib['start'] = f"{m_lim_min:.1f}"
+                y_ax.attrib['end'] = f"{m_lim_max:.1f}"
+                aline = y_ax.find(tag_ws('axisLine'))
+                if aline is not None:
+                    aline.attrib['positionticmark'] = "0"
 
     # H) Reorganización geométrica anti-colisión estricta
-    regs_dict = {r.attrib.get('region-id'): r for r in regs}
     def set_pos(rid, top, left, w=None, h=None):
         if rid in regs_dict:
             regs_dict[rid].attrib['top'] = f"{top:.1f}"

@@ -25,8 +25,8 @@ from mcdx_generator import generate_mcdx_for_beam
 import win32com.client
 
 BASE_MCDX = os.path.join(APP_DIR, "PLANTILLA_MAESTRA_10_TRAMOS_CORREGIDA.mcdx")
-DEFAULT_OUTPUT_MCDX = os.path.join(APP_DIR, "PLANTILLA_MAESTRA_10_TRAMOS_CORREGIDA.mcdx")
-DEFAULT_OUTPUT_PDF = os.path.join(APP_DIR, "PLANTILLA_MAESTRA_10_TRAMOS_CORREGIDA.pdf")
+DEFAULT_OUTPUT_MCDX = os.path.join(APP_DIR, "VIGA_SOLUCION_MATHCAD_PRIME.mcdx")
+DEFAULT_OUTPUT_PDF = os.path.join(APP_DIR, "VIGA_SOLUCION_MATHCAD_PRIME.pdf")
 MANUAL_FILE = os.path.join(APP_DIR, "FORMULARIO_Y_MANUAL_MATHCAD_VIGAS.md")
 MATHCAD_EXE = r"C:\Program Files\PTC\Mathcad Prime 11.0.0.0\MathcadPrime.exe"
 
@@ -102,6 +102,10 @@ class MathcadBeamApp(tk.Tk):
         btn_p1 = tk.Button(preset_frame, text="🎯 Ejercicio 01 (Examen Oficial)", bg="#FFC107", fg="#212529",
                            font=("Segoe UI", 8, "bold"), relief="groove", command=self.load_preset_ejercicio_01, padx=8)
         btn_p1.pack(side=tk.LEFT, padx=3, pady=4)
+
+        btn_p_user = tk.Button(preset_frame, text="⚡ Examen 3 Tramos (q=500)", bg="#E2E3E5", fg="#0C5460",
+                               font=("Segoe UI", 8, "bold"), relief="groove", command=self.load_preset_viga_3_tramos_examen, padx=8)
+        btn_p_user.pack(side=tk.LEFT, padx=3, pady=4)
 
         btn_p2 = tk.Button(preset_frame, text="🔹 Puntual Céntrica", bg="#FFFFFF", fg="#0056B3",
                            font=("Segoe UI", 8), relief="groove", command=self.load_preset_puntual, padx=8)
@@ -518,6 +522,20 @@ class MathcadBeamApp(tk.Tk):
         self.m_entries[2][0].delete(0, tk.END); self.m_entries[2][0].insert(0, "14.0")
         self.on_num_spans_changed()
 
+    def load_preset_viga_3_tramos_examen(self):
+        """Viga de Examen 3 Tramos (L=2, 4, 2m, q2=500 kg/m)."""
+        self.clear_all()
+        self.var_num_spans.set(3)
+        lens = [2.0, 4.0, 2.0]
+        for i in range(3):
+            self.span_entries[i][0].delete(0, tk.END)
+            self.span_entries[i][0].insert(0, str(lens[i]))
+        self.support_vars[0][0].set("Apoyo Fijo (Pin)")
+        self.support_vars[3][0].set("Apoyo Móvil (Roller)")
+        self.q_entries[1][0].delete(0, tk.END)
+        self.q_entries[1][0].insert(0, "500.0")
+        self.on_num_spans_changed()
+
     def clear_all(self):
         for i in range(10):
             self.span_entries[i][0].delete(0, tk.END)
@@ -543,8 +561,12 @@ class MathcadBeamApp(tk.Tk):
             self.update_model_and_render()
             out_file = DEFAULT_OUTPUT_MCDX
             
-            # 1. Generar archivo .mcdx con imágenes de viga y cortes
-            generate_mcdx_for_beam(self.beam, out_file, BASE_MCDX)
+            # 1. Generar archivo .mcdx con tolerancia a bloqueos de archivo
+            try:
+                generate_mcdx_for_beam(self.beam, out_file, BASE_MCDX)
+            except PermissionError:
+                out_file = os.path.join(APP_DIR, "VIGA_SOLUCION_MATHCAD_PRIME_CALC.mcdx")
+                generate_mcdx_for_beam(self.beam, out_file, BASE_MCDX)
             
             # 2. Notificar al usuario y abrir respetando la sesión activa de Mathcad
             if os.path.exists(MATHCAD_EXE):

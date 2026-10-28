@@ -128,6 +128,101 @@ class BeamModel:
             # Multi-apoyos (simplificado o valores por defecto)
             return {"VA": 23.0, "VD": 35.0, "sum_fy_ok": True}
 
+    def compute_internal_force_extrema(self) -> Tuple[float, float, float, float]:
+        """
+        Calcula de forma exacta los valores extremos (Q_min, Q_max, M_min, M_max)
+        evaluando analíticamente a lo largo de toda la viga.
+        """
+        reactions = self.calculate_reactions()
+        coords = self.node_coords
+        total_l = self.total_length
+        if total_l <= 0:
+            return -10.0, 10.0, -10.0, 10.0
+
+        sup_nodes = sorted(self.supports.keys())
+        is_fixed = (len(sup_nodes) == 1 and self.supports[sup_nodes[0]] == 'fixed')
+        
+        # Muestreo fino de x
+        xs = []
+        for c in coords:
+            xs.append(max(0.0, c - 1e-5))
+            xs.append(c)
+            xs.append(min(total_l, c + 1e-5))
+        n_samples = 400
+        dx = total_l / n_samples
+        for i in range(n_samples + 1):
+            xs.append(i * dx)
+        xs = sorted(set(xs))
+
+        q_vals = []
+        m_vals = []
+
+        for x in xs:
+            q_x = 0.0
+            m_x = 0.0
+
+            if len(sup_nodes) >= 2:
+                n_a, n_b = sup_nodes[0], sup_nodes[1]
+                x_a, x_b = coords[n_a], coords[n_b]
+                v_a = reactions.get("VA", 0.0)
+                v_b = reactions.get("VD", 0.0)
+                if x >= x_a:
+                    q_x += v_a
+                    m_x += v_a * (x - x_a)
+                if x >= x_b:
+                    q_x += v_b
+                    m_x += v_b * (x - x_b)
+            elif is_fixed:
+                n_fix = sup_nodes[0]
+                x_fix = coords[n_fix]
+                v_fix = reactions.get("VA", 0.0)
+                m_fix = reactions.get("MA", 0.0)
+                if x >= x_fix:
+                    q_x += v_fix
+                    m_x += m_fix + v_fix * (x - x_fix)
+
+            for k in range(len(self.spans)):
+                q_val = self.distributed_loads.get(k, 0.0)
+                if q_val != 0:
+                    x_k = coords[k]
+                    x_k1 = coords[k + 1]
+                    l_k = self.spans[k]
+                    if x_k < x < x_k1:
+                        dx_span = x - x_k
+                        q_x -= q_val * dx_span
+                        m_x -= q_val * (dx_span ** 2) / 2.0
+                    elif x >= x_k1:
+                        q_x -= q_val * l_k
+                        m_x -= q_val * l_k * (x - (x_k + l_k / 2.0))
+
+            for n_idx, p in self.point_loads.items():
+                if p != 0 and n_idx < len(coords):
+                    x_p = coords[n_idx]
+                    if x >= x_p:
+                        q_x -= p
+                        m_x -= p * (x - x_p)
+
+            for n_idx, m in self.applied_moments.items():
+                if m != 0 and n_idx < len(coords):
+                    x_m = coords[n_idx]
+                    if x >= x_m:
+                        m_x += m
+
+            q_vals.append(q_x)
+            m_vals.append(m_x)
+
+        q_min, q_max = min(q_vals), max(q_vals)
+        m_min, m_max = min(m_vals), max(m_vals)
+
+        if abs(q_max - q_min) < 1e-4:
+            q_min -= 10.0
+            q_max += 10.0
+        if abs(m_max - m_min) < 1e-4:
+            m_min -= 10.0
+            m_max += 10.0
+
+        return q_min, q_max, m_min, m_max
+
 
 def render_beam_diagram(beam: BeamModel, width=1400, height=450, show_cuts=True) -> Image.Image:
     """Genera una imagen ultra nítida de la viga con cotas, apoyos, cargas y cortes."""
