@@ -15,5 +15,7 @@ patch_*.py
 check_*.py
 inspect_*.py
 read_*.py
+add_*.py
 !verify_ulianov_compliance_loop.py
 !run_25_ulianov_tests.py
+!run_master_audit_loop.py
