@@ -1,0 +1,39 @@
+=====================================================================================
+VERIFICACIÓN 4: MATRIZ DE 4 CASOS DE PRUEBA PARAMÉTRICOS (ESTILO VIGA 2)
+=====================================================================================
+
+Generando CASO_01: TEST_01_VIGA_2_OFICIAL_5_4_1.mcdx
+  Descripción: Viga Oficial Alain Elvis Alanoca Aragón: L=[5, 4, 1] m, q2=700 kg/m
+  [OK] Archivo MCDX generado.
+  Reacciones calculadas: V_0=840.00 kg, V_3=1960.00 kg, VA=840.00 kg, VD=1960.00 kg, sum_fy_ok=1.00 kg
+  Verificación Estructural XML: r_x=True, r_v=True, r_m=True
+  Desigualdad lessThan: True, Sin errores '>>': True
+  ✅ Caso CASO_01: 100% CONFORME Y VALIDADO.
+
+Generando CASO_02: TEST_02_VIGA_2TRAMOS_CARGA_PUNTUAL.mcdx
+  Descripción: Viga 2 Tramos: L=[4, 4] m, q1=500 kg/m, Carga puntual P1=1000 kg en x=4 m
+  [OK] Archivo MCDX generado.
+  Reacciones calculadas: V_0=2000.00 kg, V_2=1000.00 kg, VA=2000.00 kg, VD=1000.00 kg, sum_fy_ok=1.00 kg
+  Verificación Estructural XML: r_x=True, r_v=True, r_m=True
+  Desigualdad lessThan: True, Sin errores '>>': True
+  ✅ Caso CASO_02: 100% CONFORME Y VALIDADO.
+
+Generando CASO_03: TEST_03_VIGA_SIMETRICA_CON_VOLADIZO.mcdx
+  Descripción: Viga Simétrica con Voladizo: L=[2, 6, 2] m, Apoyos en x=2 y x=8, q2=800 kg/m
+  [OK] Archivo MCDX generado.
+  Reacciones calculadas: V_1=2400.00 kg, V_2=2400.00 kg, VA=2400.00 kg, VD=2400.00 kg, sum_fy_ok=1.00 kg
+  Verificación Estructural XML: r_x=True, r_v=True, r_m=True
+  Desigualdad lessThan: True, Sin errores '>>': True
+  ✅ Caso CASO_03: 100% CONFORME Y VALIDADO.
+
+Generando CASO_04: TEST_04_VIGA_TRES_TRAMOS_DOS_CARGAS.mcdx
+  Descripción: Viga 3 Tramos con Doble Carga: L=[3, 4, 3] m, q1=400 kg/m, q2=600 kg/m
+  [OK] Archivo MCDX generado.
+  Reacciones calculadas: V_0=2220.00 kg, V_3=1380.00 kg, VA=2220.00 kg, VD=1380.00 kg, sum_fy_ok=1.00 kg
+  Verificación Estructural XML: r_x=True, r_v=True, r_m=True
+  Desigualdad lessThan: True, Sin errores '>>': True
+  ✅ Caso CASO_04: 100% CONFORME Y VALIDADO.
+
+=====================================================================================
+RESULTADO DE CASOS DE PRUEBA: 4/4 CASOS COMPLETAMENTE CONFORMES
+=====================================================================================

@@ -1,0 +1,39 @@
+================================================================================
+VERIFICACIÓN 1: AUDITORÍA XML QUIRÚRGICA DE ARCHIVOS MCDX (ESTILO VIGA 2)
+================================================================================
+
+--- Analizando Archivo: Viga_3Tramos_Mathcad_Prime_11 (4).mcdx ---
+  [PASS] 1. Regiones críticas presentes: x (rango), V(x) (cortante), M(x) (momento), Plot DFC y Plot DMF.
+  [PASS] 2. Orden vertical correcto (top): x=690.0 < V=730.0 < M=785.0 < PlotV=860.0 < PlotM=1130.0
+  [PASS] 3. Desigualdad encadenada correcta: <ml:lessThan> anidado genera (x1 < x < x2) sin '>>'.
+  [PASS] 4. Función de cortante rotulada estrictamente como V(x) (no Q(x)).
+  [PASS] 5. Gráfico DFC grafica V(x) con formato numérico decimal limpio (sin 10³).
+  [PASS] 6. Factorización explícita del brazo en M(x): ((x - x1) / 2) y tramo superado.
+
+--- Analizando Archivo: Viga_3Tramos_Mathcad_Prime_11.mcdx ---
+  [PASS] 1. Regiones críticas presentes: x (rango), V(x) (cortante), M(x) (momento), Plot DFC y Plot DMF.
+  [PASS] 2. Orden vertical correcto (top): x=690.0 < V=730.0 < M=785.0 < PlotV=860.0 < PlotM=1130.0
+  [PASS] 3. Desigualdad encadenada correcta: <ml:lessThan> anidado genera (x1 < x < x2) sin '>>'.
+  [PASS] 4. Función de cortante rotulada estrictamente como V(x) (no Q(x)).
+  [PASS] 5. Gráfico DFC grafica V(x) con formato numérico decimal limpio (sin 10³).
+  [PASS] 6. Factorización explícita del brazo en M(x): ((x - x1) / 2) y tramo superado.
+
+--- Analizando Archivo: PLANTILLA_VIGA_ESTILO_VIGA2_OFICIAL.mcdx ---
+  [PASS] 1. Regiones críticas presentes: x (rango), V(x) (cortante), M(x) (momento), Plot DFC y Plot DMF.
+  [PASS] 2. Orden vertical correcto (top): x=690.0 < V=730.0 < M=785.0 < PlotV=860.0 < PlotM=1130.0
+  [PASS] 3. Desigualdad encadenada correcta: <ml:lessThan> anidado genera (x1 < x < x2) sin '>>'.
+  [PASS] 4. Función de cortante rotulada estrictamente como V(x) (no Q(x)).
+  [PASS] 5. Gráfico DFC grafica V(x) con formato numérico decimal limpio (sin 10³).
+  [PASS] 6. Factorización explícita del brazo en M(x): ((x - x1) / 2) y tramo superado.
+
+--- Analizando Archivo: VIGA_2_EJEMPLO_PROFESOR_ALAIN_ALANOCA.mcdx ---
+  [PASS] 1. Regiones críticas presentes: x (rango), V(x) (cortante), M(x) (momento), Plot DFC y Plot DMF.
+  [PASS] 2. Orden vertical correcto (top): x=491.3 < V=510.2 < M=548.0 < PlotV=566.9 < PlotM=737.0
+  [PASS] 3. Desigualdad encadenada correcta: <ml:lessThan> anidado genera (x1 < x < x2) sin '>>'.
+  [PASS] 4. Función de cortante rotulada estrictamente como V(x) (no Q(x)).
+  [PASS] 5. Gráfico DFC grafica V(x) con formato numérico decimal limpio (sin 10³).
+  [PASS] 6. Factorización explícita del brazo en M(x): ((x - x1) / 2) y tramo superado.
+
+================================================================================
+RESULTADO GLOBAL AUDITORÍA XML: 24/24 PRUEBAS EXITOSAS (100.0%)
+================================================================================
