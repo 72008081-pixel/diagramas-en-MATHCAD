@@ -17,3 +17,8 @@ test_3_rigorous_cases.py
 test_e2e_full_browser.py
 test_pyodide_browser.py
 test_user_case_com.py
+
+check_reg_tags.py
+inspect_flowdocs.py
+inspect_math_equations.py
+read_all_flowdocs.py
