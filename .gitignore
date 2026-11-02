@@ -5,3 +5,7 @@ __pycache__/
 *.log
 .vscode/
 .idea/
+test_battery_100/
+test_*.mcdx
+test_*.ps1
+
