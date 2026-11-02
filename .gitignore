@@ -8,10 +8,11 @@ __pycache__/
 test_battery_100/
 test_*.mcdx
 test_*.ps1
-
-test_outputs/bateria_3_casos/
-test_outputs/e2e_browser_downloads/
-test_outputs/USER_CASE_*.mcdx
+test_outputs/
+scratch/
+test_ulianov_*.py
+patch_index_ulianov.py
+test_e2e_browser_mcdx.py
 test_3_rigorous_cases.py
 test_e2e_full_browser.py
 test_pyodide_browser.py
